@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - {{ business.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <h2>{{ business.name }}</h2>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="{{ url_for('dashboard.overview') }}">📊 Overview</a></li>
+            <li class="active"><a href="{{ url_for('dashboard.analytics') }}">📈 Analytics</a></li>
+            <li><a href="{{ url_for('dashboard.feedback_list') }}">💬 Feedback</a></li>
+            <li><a href="{{ url_for('dashboard.settings') }}">⚙️ Settings</a></li>
+            <li><a href="{{ url_for('auth.logout') }}">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <header>
+            <h1>Analytics</h1>
+        </header>
+
+        <div class="card">
+            <h3>Detailed analytics coming soon...</h3>
+            <p>This page will show trends, comparisons, and insights from your feedback data.</p>
+        </div>
+    </main>
+</body>
+</html>

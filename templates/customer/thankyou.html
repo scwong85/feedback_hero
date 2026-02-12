@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% set css_file = 'customer.css' %}
+
+{% block title %}Thank You!{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="feedback-card">
+        <div class="celebration">🎉</div>
+        <h1>Thank You!</h1>
+        <p>Your feedback has been received and helps us improve our service.</p>
+        <p class="subtitle">- {{ business.name }}</p>
+        <a href="{{ url_for('index') }}" class="btn-primary">Back to Home</a>
+    </div>
+</div>
+{% endblock %}

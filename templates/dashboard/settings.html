@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - {{ business.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <h2>{{ business.name }}</h2>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="{{ url_for('dashboard.overview') }}">📊 Overview</a></li>
+            <li><a href="{{ url_for('dashboard.analytics') }}">📈 Analytics</a></li>
+            <li><a href="{{ url_for('dashboard.feedback_list') }}">💬 Feedback</a></li>
+            <li class="active"><a href="{{ url_for('dashboard.settings') }}">⚙️ Settings</a></li>
+            <li><a href="{{ url_for('auth.logout') }}">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <header>
+            <h1>Settings</h1>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Account Information -->
+        <div class="card">
+            <h3>Account Information</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Business Name:</label>
+                    <span>{{ business.name }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Email:</label>
+                    <span>{{ business.email }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Account Created:</label>
+                    <span>{{ business.created_at.strftime('%B %d, %Y') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card">
+            <h3>Change Password</h3>
+                <form method="POST" action="{{ url_for('dashboard.change_password') }}" class="password-form">
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <input type="password" id="current_password" name="current_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" required minlength="8">
+                    <small>Minimum 8 characters</small>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm New Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required minlength="8">
+                </div>
+                <button type="submit" class="btn-primary">Change Password</button>
+            </form>
+        </div>
+
+        <!-- Update Business Name -->
+        <div class="card">
+            <h3>Update Business Information</h3>
+            <form method="POST" action="{{ url_for('dashboard.update_business') }}" class="business-form">
+                <div class="form-group">
+                    <label for="business_name">Business Name</label>
+                    <input type="text" id="business_name" name="business_name" value="{{ business.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="{{ business.email }}" required>
+                </div>
+                <button type="submit" class="btn-primary">Update Information</button>
+            </form>
+        </div>
+
+        <!-- Feedback URL -->
+        <div class="card">
+            <h3>Feedback URL</h3>
+            <p>Share this URL with customers or display the QR code</p>
+            <div class="url-box">
+                <input type="text" value="{{ request.url_root }}" readonly id="feedback-url">
+                <button onclick="copyUrl()" class="btn-secondary">Copy</button>
+            </div>
+        </div>
+
+        <!-- QR Code -->
+        <div class="card">
+            <h3>QR Code</h3>
+            <p>Download this QR code to display in your business</p>
+            <a href="{{ url_for('dashboard.generate_qr') }}" class="btn-primary" download>📥 Download QR Code</a>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card danger-zone">
+            <h3>Danger Zone</h3>
+            <p>These actions are irreversible. Please be certain.</p>
+            <button onclick="confirmDeleteAllFeedback()" class="btn-danger">Delete All Feedback</button>
+        </div>
+    </main>
+
+    <script>
+        function copyUrl() {
+            const input = document.getElementById('feedback-url');
+            input.select();
+            input.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            alert('URL copied to clipboard!');
+        }
+
+        function confirmDeleteAllFeedback() {
+            if (confirm('Are you sure you want to delete ALL feedback? This cannot be undone!')) {
+                if (confirm('This will permanently delete all customer feedback. Are you absolutely sure?')) {
+                    fetch('/dashboard/api/feedback/delete-all', {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('All feedback has been deleted.');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error deleting feedback');
+                    });
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .info-grid {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .info-item label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+        
+        .password-form, .business-form {
+            max-width: 500px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        
+        .danger-zone {
+            border: 2px solid var(--danger);
+        }
+        
+        .btn-danger {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: var(--danger);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .alert {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</body>
+</html>

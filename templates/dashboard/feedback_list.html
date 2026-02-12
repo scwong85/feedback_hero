@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback - {{ business.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <h2>{{ business.name }}</h2>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="{{ url_for('dashboard.overview') }}">📊 Overview</a></li>
+            <li><a href="{{ url_for('dashboard.analytics') }}">📈 Analytics</a></li>
+            <li class="active"><a href="{{ url_for('dashboard.feedback_list') }}">💬 Feedback</a></li>
+            <li><a href="{{ url_for('dashboard.settings') }}">⚙️ Settings</a></li>
+            <li><a href="{{ url_for('auth.logout') }}">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <header>
+            <h1>Customer Feedback</h1>
+            <div class="header-actions">
+                <a href="{{ url_for('dashboard.export_feedback') }}" class="btn-secondary">📥 Export CSV</a>
+            </div>
+        </header>
+
+        <div class="card">
+            <div class="table-container">
+                <table class="feedback-table" id="feedback-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Overall</th>
+                            <th>Food</th>
+                            <th>Service</th>
+                            <th>Staff</th>
+                            <th>Clean</th>
+                            <th>Value</th>
+                            <th>NPS</th>
+                            <th>Comment</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="feedback-body">
+                        <tr>
+                            <td colspan="10" class="loading-cell">Loading feedback...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script>
+        loadFeedbackList();
+    </script>
+</body>
+</html>

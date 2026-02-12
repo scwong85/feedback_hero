@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% set css_file = 'customer.css' %}
+
+{% block title %}Share Your Feedback - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="feedback-card" id="welcome-screen">
+        <div class="logo-section">
+            <h1>{{ business.name }}</h1>
+            <p class="subtitle">We'd love to hear from you!</p>
+        </div>
+        <div class="time-indicator">⏱️ Takes 30 seconds</div>
+        <button class="btn-primary btn-large" onclick="startFeedback()">Start Feedback</button>
+    </div>
+
+    <div class="feedback-card hidden" id="question-1">
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 25%"></div>
+        </div>
+        <div class="question-number">Question 1 of 4</div>
+        <h2>How was your overall experience?</h2>
+        <div class="emoji-container">
+            <button class="emoji-btn" onclick="selectOverall(1)" data-value="1">
+                <div class="emoji">😞</div>
+                <div class="emoji-label">Not Great</div>
+            </button>
+            <button class="emoji-btn" onclick="selectOverall(2)" data-value="2">
+                <div class="emoji">😐</div>
+                <div class="emoji-label">Okay</div>
+            </button>
+            <button class="emoji-btn" onclick="selectOverall(3)" data-value="3">
+                <div class="emoji">😊</div>
+                <div class="emoji-label">Great!</div>
+            </button>
+        </div>
+    </div>
+
+    <div class="feedback-card hidden" id="question-2">
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 50%"></div>
+        </div>
+        <div class="question-number">Question 2 of 4</div>
+        <h2>Rate these aspects</h2>
+        <div class="rating-group">
+            <div class="rating-item">
+                <label>Food Quality</label>
+                <div class="stars" data-category="food"></div>
+            </div>
+            <div class="rating-item">
+                <label>Service Speed</label>
+                <div class="stars" data-category="service"></div>
+            </div>
+            <div class="rating-item">
+                <label>Staff Friendliness</label>
+                <div class="stars" data-category="staff"></div>
+            </div>
+            <div class="rating-item">
+                <label>Cleanliness</label>
+                <div class="stars" data-category="cleanliness"></div>
+            </div>
+            <div class="rating-item">
+                <label>Value for Money</label>
+                <div class="stars" data-category="value"></div>
+            </div>
+        </div>
+        <button class="btn-primary" onclick="nextQuestion(3)">Continue</button>
+    </div>
+
+    <div class="feedback-card hidden" id="question-3">
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 75%"></div>
+        </div>
+        <div class="question-number">Question 3 of 4</div>
+        <h2>How likely are you to recommend us?</h2>
+        <div class="nps-container">
+            <div class="nps-labels">
+                <span>Not Likely</span>
+                <span>Very Likely</span>
+            </div>
+            <div class="nps-buttons" id="nps-buttons"></div>
+        </div>
+        <button class="btn-primary" onclick="nextQuestion(4)">Continue</button>
+    </div>
+
+    <div class="feedback-card hidden" id="question-4">
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 100%"></div>
+        </div>
+        <div class="question-number">Question 4 of 4</div>
+        <h2>Any comments or suggestions?</h2>
+        <p class="subtitle">This is optional</p>
+        <textarea id="comment" placeholder="Share your thoughts..." maxlength="200"></textarea>
+        <div class="char-counter"><span id="char-count">0</span>/200</div>
+        <div class="button-group">
+            <button class="btn-secondary" onclick="submitFeedback()">Skip</button>
+            <button class="btn-primary" onclick="submitFeedback()">Submit</button>
+        </div>
+    </div>
+
+    <div class="feedback-card hidden" id="thank-you">
+        <div class="celebration">🎉</div>
+        <h1>Thank You!</h1>
+        <p>Your feedback helps us improve</p>
+        <button class="btn-primary" onclick="location.reload()">Submit Another</button>
+    </div>
+
+    <div class="loading hidden" id="loading">
+        <div class="spinner"></div>
+        <p>Submitting...</p>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/customer.js') }}"></script>
+{% endblock %}
