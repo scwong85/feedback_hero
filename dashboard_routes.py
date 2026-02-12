@@ -547,3 +547,201 @@ def get_summary():
     except Exception as e:
         print(f"Error getting summary: {e}")
         return jsonify({"error": "Error loading summary"}), 500
+
+
+# Add this to dashboard_routes.py after the other API routes
+
+
+@dashboard_bp.route("/api/analytics")
+@login_required
+def get_analytics():
+    """
+    Get detailed analytics data
+
+    Query params:
+    - period: 7, 30, 90, or 'all' (days)
+    """
+    try:
+        period = request.args.get("period", "30")
+
+        # Calculate date range
+        if period == "all":
+            start_date = datetime(2020, 1, 1)
+        else:
+            days = int(period)
+            start_date = datetime.utcnow() - timedelta(days=days)
+
+        # Get feedback for period
+        feedback_list = (
+            Feedback.query.filter(
+                Feedback.business_id == current_user.id,
+                Feedback.timestamp >= start_date,
+            )
+            .order_by(Feedback.timestamp.asc())
+            .all()
+        )
+
+        if not feedback_list:
+            return jsonify(
+                {
+                    "sentiment": {"happy": 0, "neutral": 0, "sad": 0},
+                    "trends": [],
+                    "nps_distribution": [0] * 11,
+                    "category_trends": [],
+                    "activity": {
+                        "busiest_day": "N/A",
+                        "busiest_hour": "N/A",
+                        "avg_per_day": 0,
+                        "response_rate": 0,
+                    },
+                    "recent_comments": [],
+                }
+            )
+
+        # Sentiment breakdown
+        sentiment = {
+            "happy": len([f for f in feedback_list if f.overall_rating == 3]),
+            "neutral": len([f for f in feedback_list if f.overall_rating == 2]),
+            "sad": len([f for f in feedback_list if f.overall_rating == 1]),
+        }
+
+        # Daily trends (group by day)
+        daily_data = defaultdict(lambda: {"ratings": [], "count": 0})
+        for f in feedback_list:
+            day_key = f.timestamp.strftime("%Y-%m-%d")
+            daily_data[day_key]["ratings"].append(f.overall_rating)
+            daily_data[day_key]["count"] += 1
+
+        # Create trend data (last N days)
+        days_to_show = min(int(period) if period != "all" else 30, 30)
+        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        trends = []
+
+        for i in range(days_to_show):
+            day = today - timedelta(days=days_to_show - 1 - i)
+            day_key = day.strftime("%Y-%m-%d")
+            data = daily_data[day_key]
+
+            avg_rating = (
+                sum(data["ratings"]) / len(data["ratings"]) if data["ratings"] else 0
+            )
+            trends.append(
+                {"date": day.strftime("%m/%d"), "avg_rating": round(avg_rating, 2)}
+            )
+
+        # NPS distribution
+        nps_distribution = [0] * 11
+        for f in feedback_list:
+            if f.nps_score is not None:
+                nps_distribution[f.nps_score] += 1
+
+        # Category trends over time
+        category_daily = defaultdict(
+            lambda: {
+                "food": [],
+                "service": [],
+                "staff": [],
+                "cleanliness": [],
+                "value": [],
+            }
+        )
+
+        for f in feedback_list:
+            day_key = f.timestamp.strftime("%Y-%m-%d")
+            if f.food_rating:
+                category_daily[day_key]["food"].append(f.food_rating)
+            if f.service_rating:
+                category_daily[day_key]["service"].append(f.service_rating)
+            if f.staff_rating:
+                category_daily[day_key]["staff"].append(f.staff_rating)
+            if f.cleanliness_rating:
+                category_daily[day_key]["cleanliness"].append(f.cleanliness_rating)
+            if f.value_rating:
+                category_daily[day_key]["value"].append(f.value_rating)
+
+        category_trends = []
+        for i in range(days_to_show):
+            day = today - timedelta(days=days_to_show - 1 - i)
+            day_key = day.strftime("%Y-%m-%d")
+            data = category_daily[day_key]
+
+            def avg(lst):
+                return round(sum(lst) / len(lst), 2) if lst else 0
+
+            category_trends.append(
+                {
+                    "date": day.strftime("%m/%d"),
+                    "food": avg(data["food"]),
+                    "service": avg(data["service"]),
+                    "staff": avg(data["staff"]),
+                    "cleanliness": avg(data["cleanliness"]),
+                    "value": avg(data["value"]),
+                }
+            )
+
+        # Activity analysis
+        day_counts = defaultdict(int)
+        hour_counts = defaultdict(int)
+
+        for f in feedback_list:
+            day_name = f.timestamp.strftime("%A")
+            hour = f.timestamp.hour
+            day_counts[day_name] += 1
+            hour_counts[hour] += 1
+
+        busiest_day = (
+            max(day_counts.items(), key=lambda x: x[1])[0] if day_counts else "N/A"
+        )
+        busiest_hour = (
+            max(hour_counts.items(), key=lambda x: x[1])[0] if hour_counts else "N/A"
+        )
+
+        if busiest_hour != "N/A":
+            busiest_hour = f"{busiest_hour}:00 - {busiest_hour + 1}:00"
+
+        # Calculate days in period
+        days_in_period = (datetime.utcnow() - start_date).days or 1
+        avg_per_day = len(feedback_list) / days_in_period
+
+        # Response rate (feedback with reviewed status)
+        reviewed_count = len([f for f in feedback_list if f.reviewed])
+        response_rate = (
+            round((reviewed_count / len(feedback_list)) * 100) if feedback_list else 0
+        )
+
+        # Recent comments (last 10 with comments)
+        recent_with_comments = [
+            f for f in reversed(feedback_list) if f.comment and f.comment.strip()
+        ][:10]
+
+        recent_comments = [
+            {
+                "comment": f.comment,
+                "rating": f.overall_rating,
+                "timestamp": f.timestamp.isoformat(),
+            }
+            for f in recent_with_comments
+        ]
+
+        return jsonify(
+            {
+                "sentiment": sentiment,
+                "trends": trends,
+                "nps_distribution": nps_distribution,
+                "category_trends": category_trends,
+                "activity": {
+                    "busiest_day": busiest_day,
+                    "busiest_hour": busiest_hour,
+                    "avg_per_day": round(avg_per_day, 1),
+                    "response_rate": response_rate,
+                },
+                "recent_comments": recent_comments,
+            }
+        )
+
+    except Exception as e:
+        print(f"Error getting analytics: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"error": "Error loading analytics"}), 500
