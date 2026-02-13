@@ -1,6 +1,15 @@
-from flask import Blueprint, render_template, request, jsonify, send_file
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    jsonify,
+    send_file,
+    redirect,
+    url_for,
+    flash,
+)
 from flask_login import login_required, current_user
-from models import db, Feedback
+from models import db, Feedback, Business
 from datetime import datetime, timedelta
 from collections import defaultdict
 import csv
@@ -42,65 +51,76 @@ def settings():
 @login_required
 def change_password():
     """Change password for logged-in user"""
-    current_password = request.form.get("current_password", "")
-    new_password = request.form.get("new_password", "")
-    confirm_password = request.form.get("confirm_password", "")
-
-    if not current_user.check_password(current_password):
-        flash("Current password is incorrect", "error")
-        return redirect(url_for("dashboard.settings"))
-
-    if new_password != confirm_password:
-        flash("New passwords do not match", "error")
-        return redirect(url_for("dashboard.settings"))
-
-    if len(new_password) < 8:
-        flash("Password must be at least 8 characters long", "error")
-        return redirect(url_for("dashboard.settings"))
-
-    current_user.set_password(new_password)
-
     try:
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        # Validation
+        if not current_password or not new_password or not confirm_password:
+            flash("All fields are required", "error")
+            return redirect(url_for("dashboard.settings"))
+
+        if not current_user.check_password(current_password):
+            flash("Current password is incorrect", "error")
+            return redirect(url_for("dashboard.settings"))
+
+        if new_password != confirm_password:
+            flash("New passwords do not match", "error")
+            return redirect(url_for("dashboard.settings"))
+
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters long", "error")
+            return redirect(url_for("dashboard.settings"))
+
+        # Update password
+        current_user.set_password(new_password)
         db.session.commit()
+
         flash("Password changed successfully!", "success")
+        return redirect(url_for("dashboard.settings"))
+
     except Exception as e:
         db.session.rollback()
-        flash("Error changing password", "error")
-
-    return redirect(url_for("dashboard.settings"))
+        print(f"Error changing password: {e}")
+        flash("Error changing password. Please try again.", "error")
+        return redirect(url_for("dashboard.settings"))
 
 
 @dashboard_bp.route("/update-business", methods=["POST"])
 @login_required
 def update_business():
     """Update business name and email"""
-    business_name = request.form.get("business_name", "").strip()
-    email = request.form.get("email", "").strip()
-
-    if not business_name or not email:
-        flash("Business name and email are required", "error")
-        return redirect(url_for("dashboard.settings"))
-
-    # Check if email is already taken by another business
-    existing = Business.query.filter(
-        Business.email == email, Business.id != current_user.id
-    ).first()
-
-    if existing:
-        flash("Email already in use by another business", "error")
-        return redirect(url_for("dashboard.settings"))
-
-    current_user.name = business_name
-    current_user.email = email
-
     try:
+        business_name = request.form.get("business_name", "").strip()
+        email = request.form.get("email", "").strip()
+
+        if not business_name or not email:
+            flash("Business name and email are required", "error")
+            return redirect(url_for("dashboard.settings"))
+
+        # Check if email is already taken by another business
+        existing = Business.query.filter(
+            Business.email == email, Business.id != current_user.id
+        ).first()
+
+        if existing:
+            flash("Email already in use by another business", "error")
+            return redirect(url_for("dashboard.settings"))
+
+        # Update business info
+        current_user.name = business_name
+        current_user.email = email
         db.session.commit()
+
         flash("Business information updated successfully!", "success")
+        return redirect(url_for("dashboard.settings"))
+
     except Exception as e:
         db.session.rollback()
-        flash("Error updating business information", "error")
-
-    return redirect(url_for("dashboard.settings"))
+        print(f"Error updating business: {e}")
+        flash("Error updating business information. Please try again.", "error")
+        return redirect(url_for("dashboard.settings"))
 
 
 @dashboard_bp.route("/api/feedback/delete-all", methods=["DELETE"])
@@ -108,11 +128,12 @@ def update_business():
 def delete_all_feedback():
     """Delete all feedback (danger zone action)"""
     try:
-        Feedback.query.filter_by(business_id=current_user.id).delete()
+        count = Feedback.query.filter_by(business_id=current_user.id).delete()
         db.session.commit()
-        return jsonify({"success": True, "message": "All feedback deleted"})
+        return jsonify({"success": True, "message": f"{count} feedback items deleted"})
     except Exception as e:
         db.session.rollback()
+        print(f"Error deleting feedback: {e}")
         return jsonify({"error": "Error deleting feedback"}), 500
 
 
